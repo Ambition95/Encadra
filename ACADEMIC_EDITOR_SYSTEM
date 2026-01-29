@@ -1,0 +1,631 @@
+# Academic Editor Component System Documentation
+
+## Overview
+
+A scalable, production-ready component system for academic writing that provides continuous document editing, AI assistance, research integration, chapter management, and real-time collaboration.
+
+---
+
+## Architecture
+
+### Component Hierarchy
+
+```
+AcademicEditor (Root)
+├── EditorContainer (Layout Wrapper)
+├── TopBar (Sticky Header)
+│   ├── Back Button
+│   ├── Project Title (Editable)
+│   ├── Save Button (with auto-save)
+│   └── Export Menu (PDF/DOCX/TXT)
+├── Main Content Area
+│   ├── Sections Panel
+│   │   ├── SectionCard (Multiple)
+│   │   │   ├── Section Header
+│   │   │   │   ├── Expand/Collapse Toggle
+│   │   │   │   ├── Section Title (Editable)
+│   │   │   │   ├── Status Badge
+│   │   │   │   └── Actions Menu
+│   │   │   └── Section Content (when expanded)
+│   │   │       ├── Subtitle Block
+│   │   │       ├── Editable Lines
+│   │   │       │   ├── Checkbox
+│   │   │       │   ├── Text Area
+│   │   │       │   ├── Lock/Unlock
+│   │   │       │   └── Delete
+│   │   │       └── Action Buttons
+│   │   └── Add Section Button
+└── Right Side Panels (Overlay)
+    ├── SidePanel (AI & Articles)
+    ├── ChapterManager
+    ├── NotesPanel
+    └── CollaborationPanel
+```
+
+---
+
+## Components
+
+### 1. EditorContainer
+
+**Purpose:** Root layout wrapper for the entire editor
+
+**Features:**
+- Full-screen container
+- Max-width constraint (1440px)
+- Vertical scrolling
+- Responsive design
+
+**Props:** None (layout only)
+
+---
+
+### 2. TopBar
+
+**Purpose:** Sticky header with project controls
+
+**Features:**
+- Sticky positioning (always visible)
+- Editable project title (click to edit)
+- Auto-save with visual feedback
+- Export menu (PDF/DOCX/TXT)
+- Save state indicators:
+  - Default
+  - Saving (animated)
+  - Saved (with checkmark)
+
+**Props:**
+```typescript
+interface TopBarProps {
+  projectTitle: string;
+  onTitleChange: (title: string) => void;
+  onBack: () => void;
+  onSave: () => Promise<void>;
+  onExport: (format: "pdf" | "docx" | "txt") => void;
+}
+```
+
+**Visual States:**
+- Default: "Save" button
+- Saving: Pulse animation + "Saving..."
+- Saved: Green background + "Saved" (2 seconds)
+
+**Auto-save:**
+- Triggers 3 seconds after last change
+- Visual progress indicator at bottom
+
+---
+
+### 3. SectionCard
+
+**Purpose:** Core writing component with expandable sections
+
+**Features:**
+- **Continuous Document Mode:** When expanded, removes borders for seamless flow
+- **Line-Level Editing:** Individual control per paragraph
+- **Status System:** Visual indicators for section state
+- **Inline Editing:** Click to edit title and subtitle
+
+**Props:**
+```typescript
+interface SectionCardProps {
+  id: string;
+  title: string;
+  subtitle?: string;
+  status: "collapsed" | "expanded" | "locked" | "complete" | "validated" | "high-priority";
+  lines: EditableLine[];
+  onStatusChange: (status: SectionStatus) => void;
+  onTitleChange: (title: string) => void;
+  onSubtitleChange: (subtitle: string) => void;
+  onLineChange: (lineId: string, text: string) => void;
+  onLineToggleSelect: (lineId: string) => void;
+  onLineToggleLock: (lineId: string) => void;
+  onAddLine: () => void;
+  onDeleteLine: (lineId: string) => void;
+  onAddSubtitle: () => void;
+  onAddGraph: () => void;
+  onAddTable: () => void;
+  onDelete: () => void;
+}
+```
+
+**Line Controls:**
+- ☑️ **Checkbox:** Select line for AI operations
+- 🔒 **Lock:** Prevent editing (AI can still read)
+- 🗑️ **Delete:** Remove line
+- Auto-expanding textarea
+
+**Status Badges:**
+- Complete: Green
+- Validated: Blue
+- High Priority: Red
+- Locked: Gray
+
+**Interaction Rules:**
+- Expanded sections have no borders (continuous document)
+- Collapsed sections show as cards
+- Hover reveals line-level controls
+- Click title to edit
+- ESC to cancel edit
+
+---
+
+### 4. SidePanel
+
+**Purpose:** AI assistant and research article integration
+
+**Features:**
+- **Two Tabs:**
+  1. Recent Articles
+  2. AI Editor
+
+**Article Management:**
+- Search articles by title/author
+- Match percentage (color-coded)
+- Keywords display
+- "Add to AI" button (adds to context)
+- Visual indication when added (blue background)
+
+**AI Editor:**
+- Mode selection:
+  - Rewrite
+  - Condense
+  - Expand
+  - Detect Gaps
+- Optional instructions textarea
+- Context indicator (shows # of articles)
+- Apply to selected content
+
+**Props:**
+```typescript
+interface SidePanelProps {
+  onClose: () => void;
+  onFullscreen: () => void;
+  state: "collapsed" | "expanded" | "fullscreen";
+}
+```
+
+**States:**
+- Expanded: 600px width
+- Fullscreen: Full screen overlay
+- Transitions: Smooth 300ms
+
+---
+
+### 5. ChapterManager
+
+**Purpose:** High-level document organization
+
+**Features:**
+- Chapter overview cards
+- Progress tracking (word count vs. target)
+- Deadline management
+- Status indicators:
+  - On Track (green)
+  - At Risk (amber)
+  - Overdue (red)
+- Generate structure with AI
+- Add new chapters
+
+**Props:**
+```typescript
+interface ChapterManagerProps {
+  chapters: Chapter[];
+  onClose: () => void;
+  onGenerateStructure: () => void;
+  onAddChapter: () => void;
+  onSelectChapter: (chapterId: string) => void;
+}
+
+interface Chapter {
+  id: string;
+  title: string;
+  type: "thesis" | "article";
+  currentWordCount: number;
+  targetWordCount: number;
+  deadline: string;
+  status: "on-track" | "at-risk" | "overdue";
+}
+```
+
+**Features:**
+- Click chapter to navigate
+- Progress bars with color coding
+- Summary footer (total chapters, words, on-track count)
+- "Generate Structure" button (AI-powered)
+
+---
+
+### 6. NotesPanel
+
+**Purpose:** Shared and private annotations
+
+**Features:**
+- **Two Tabs:**
+  1. Shared Notes (visible to team)
+  2. Private Notes (only you)
+
+**Note Features:**
+- Author avatar and name
+- Timestamp
+- Tags (private notes only)
+- Add/delete notes
+- Color-coded (private = amber background)
+
+**Props:**
+```typescript
+interface NotesPanelProps {
+  onClose: () => void;
+}
+
+interface Note {
+  id: string;
+  author: { name: string; initials: string };
+  timestamp: string;
+  content: string;
+  tags?: string[];
+  isPrivate: boolean;
+}
+```
+
+**Add Note Flow:**
+1. Type in textarea
+2. Add tags (private only)
+3. Click "Add Note"
+4. Note appears at top of list
+
+---
+
+### 7. CollaborationPanel
+
+**Purpose:** Team member management
+
+**Features:**
+- Team member list with:
+  - Avatar
+  - Status indicator (online/away/offline)
+  - Role badge (Supervisor/Co-Author/Reviewer/Contributor)
+  - Last active timestamp
+  - Actions menu (message, email, remove)
+- Pending invitations section
+- Activity summary
+- Invite button
+
+**Props:**
+```typescript
+interface CollaborationPanelProps {
+  onClose: () => void;
+  onInvite: () => void;
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  initials: string;
+  role: "supervisor" | "co-author" | "reviewer" | "contributor";
+  status: "online" | "offline" | "away";
+  email: string;
+  lastActive?: string;
+}
+```
+
+**Status Colors:**
+- Online: Green dot
+- Away: Amber dot
+- Offline: Gray dot
+
+---
+
+## Global Interaction Rules
+
+### Panel Behavior
+
+1. **Overlay System:**
+   - All panels slide in from right
+   - Do not shift main content
+   - Smooth 300ms transition
+   - Click outside to close (optional)
+
+2. **Single Panel:**
+   - Only one panel open at a time
+   - Opening new panel closes previous
+   - Floating buttons hidden when panel open
+
+3. **State Management:**
+   - Panels maintain their own state
+   - Changes saved when panel closes
+   - Undo/redo support
+
+### Keyboard Shortcuts
+
+- `Cmd/Ctrl + S`: Save
+- `Cmd/Ctrl + E`: Export menu
+- `Esc`: Close active panel
+- `Cmd/Ctrl + /`: AI assistant
+- `Cmd/Ctrl + K`: Chapter manager
+
+### Tooltips
+
+All icon buttons have tooltips:
+- Hover for 500ms to show
+- Clear, concise descriptions
+- Keyboard shortcuts included
+
+---
+
+## Design System
+
+### Typography
+
+**Content (Sections):**
+- Font: Serif (Georgia, Times, serif)
+- Size: 16px (1rem)
+- Line height: 1.7
+- Color: #111827 (gray-900)
+
+**UI Elements:**
+- Font: Sans-serif (system)
+- Sizes: 14px (body), 12px (small)
+- Weights: 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
+
+### Colors
+
+**Status Colors:**
+- Success: Green (#10b981, #d1fae5)
+- Warning: Amber (#f59e0b, #fef3c7)
+- Danger: Red (#ef4444, #fee2e2)
+- Info: Blue (#3b82f6, #dbeafe)
+- Neutral: Gray (#6b7280, #f3f4f6)
+
+**Semantic Colors:**
+- Primary: Blue-600 (#2563eb)
+- Secondary: Purple-600 (#9333ea)
+- Background: White (#ffffff)
+- Border: Gray-200 (#e5e7eb)
+
+### Spacing
+
+**Grid System:** 4px base unit
+- xs: 4px (1 unit)
+- sm: 8px (2 units)
+- md: 16px (4 units)
+- lg: 24px (6 units)
+- xl: 32px (8 units)
+- 2xl: 48px (12 units)
+
+### Shadows
+
+- sm: `0 1px 2px 0 rgb(0 0 0 / 0.05)`
+- md: `0 4px 6px -1px rgb(0 0 0 / 0.1)`
+- lg: `0 10px 15px -3px rgb(0 0 0 / 0.1)`
+- xl: `0 20px 25px -5px rgb(0 0 0 / 0.1)`
+
+### Transitions
+
+- Duration: 200-300ms
+- Easing: ease-in-out
+- Properties: all, opacity, transform, shadow
+
+---
+
+## State Management
+
+### Local State (Component Level)
+
+Each component manages its own UI state:
+- Expanded/collapsed
+- Edit mode
+- Hover states
+- Loading states
+
+### Shared State (Editor Level)
+
+AcademicEditor manages:
+- Sections array
+- Active panel
+- Project metadata
+- Save state
+
+### Persistence
+
+Auto-save triggers:
+- 3 seconds after last change
+- On blur (switching away)
+- Before export
+- On panel close
+
+---
+
+## Accessibility
+
+### Keyboard Navigation
+
+- Tab: Move through interactive elements
+- Enter: Activate buttons/links
+- Escape: Close panels/modals
+- Arrow keys: Navigate lists
+
+### Screen Readers
+
+- Semantic HTML (header, main, aside)
+- ARIA labels on icon buttons
+- ARIA live regions for status updates
+- Focus management for modals
+
+### Focus Indicators
+
+- Visible focus ring (blue-600)
+- High contrast (4.5:1 minimum)
+- Focus trapping in modals
+- Skip to content link
+
+---
+
+## Performance
+
+### Optimizations
+
+1. **Virtual Scrolling:**
+   - Large section lists (>50)
+   - Renders only visible items
+
+2. **Debouncing:**
+   - Search inputs (300ms)
+   - Auto-save (3000ms)
+   - Resize handlers (150ms)
+
+3. **Memoization:**
+   - Section components
+   - Line components
+   - Static content
+
+4. **Lazy Loading:**
+   - Panel components
+   - AI models
+   - Article data
+
+---
+
+## Usage Examples
+
+### Basic Setup
+
+```tsx
+import { AcademicEditor } from '@/app/components/academic-editor';
+
+function App() {
+  return <AcademicEditor />;
+}
+```
+
+### With Initial Data
+
+```tsx
+const initialSections = [
+  {
+    id: "1",
+    title: "Abstract",
+    status: "expanded",
+    lines: [
+      {
+        id: "1-1",
+        text: "Your abstract text here...",
+        isSelected: false,
+        isLocked: false,
+      },
+    ],
+  },
+];
+
+<AcademicEditor initialSections={initialSections} />
+```
+
+### Custom Handlers
+
+```tsx
+<AcademicEditor
+  onSave={async (data) => {
+    await saveToDatabase(data);
+  }}
+  onExport={async (format) => {
+    const file = await generateExport(format);
+    downloadFile(file);
+  }}
+/>
+```
+
+---
+
+## Testing
+
+### Unit Tests
+
+```bash
+npm run test:unit
+```
+
+Tests cover:
+- Component rendering
+- State updates
+- Event handlers
+- Edge cases
+
+### Integration Tests
+
+```bash
+npm run test:integration
+```
+
+Tests cover:
+- Multi-component interactions
+- Panel transitions
+- Save/load flow
+- Export functionality
+
+### E2E Tests
+
+```bash
+npm run test:e2e
+```
+
+Tests cover:
+- Complete user workflows
+- AI integration
+- Collaboration features
+- Cross-browser compatibility
+
+---
+
+## Browser Support
+
+- Chrome/Edge: Last 2 versions
+- Firefox: Last 2 versions
+- Safari: Last 2 versions
+- Mobile browsers: iOS Safari 14+, Chrome Android 90+
+
+---
+
+## Known Limitations
+
+1. **Offline Mode:** Limited functionality without internet
+2. **File Size:** Performance degrades with >10,000 lines
+3. **Concurrent Editing:** Real-time sync has 2-second latency
+4. **AI Features:** Require API connection
+
+---
+
+## Future Enhancements
+
+### Planned Features
+
+- [ ] Real-time collaborative editing (CRDT)
+- [ ] Voice-to-text dictation
+- [ ] Advanced LaTeX editor
+- [ ] Citation manager integration
+- [ ] Version history with diff view
+- [ ] Mobile app (React Native)
+- [ ] Offline-first architecture
+- [ ] Plugin system
+
+### Under Consideration
+
+- Integration with reference managers (Zotero, Mendeley)
+- Grammar checking (Grammarly API)
+- Plagiarism detection
+- Translation support
+- Custom templates library
+
+---
+
+## Support
+
+For issues, questions, or feature requests:
+- GitHub Issues: [repository]/issues
+- Documentation: [docs-site]
+- Email: support@encadra.com
+
+---
+
+**Version:** 1.0.0  
+**Last Updated:** January 29, 2026  
+**License:** MIT
